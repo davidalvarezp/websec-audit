@@ -1,0 +1,149 @@
+site_name: WebSec-Audit
+site_description: Professional Web Security Audit Framework — modular, extensible, production-ready
+site_author: davidalvarezp
+site_url: https://davidalvarezp.github.io/websec-audit
+
+repo_name: davidalvarezp/websec-audit
+repo_url: https://github.com/davidalvarezp/websec-audit
+edit_uri: edit/main/docs/
+
+copyright: >
+  Copyright &copy; 2026 <a href="https://davidalvarezp.com">davidalvarezp</a>.
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: light blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+  logo: assets/logo.svg
+  favicon: assets/favicon.png
+
+  icon:
+    repo: fontawesome/brands/github
+
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.indexes
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+    - content.action.view
+    - header.autohide
+    - announce.dismiss
+
+plugins:
+  - search:
+      lang: en
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      title: On this page
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index:     !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra_css:
+  - assets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/davidalvarezp
+      name: davidalvarezp on GitHub
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/davidalvarezp
+      name: davidalvarezp on LinkedIn
+    - icon: fontawesome/solid/globe
+      link: https://davidalvarezp.com
+      name: davidalvarezp.com
+  generator: false
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Quick Start: quickstart.md
+  - Usage:
+    - All Options: usage.md
+    - Scan Modes: modes.md
+    - Reports & Output: reports.md
+  - Modules:
+    - Overview: modules/index.md
+    - "01 · Reconnaissance": modules/recon.md
+    - "02 · Port Scanning": modules/portscan.md
+    - "03 · Fingerprinting": modules/fingerprint.md
+    - "04 · SSL/TLS": modules/ssl.md
+    - "05 · HTTP Headers": modules/headers.md
+    - "06 · Dir & File Enum": modules/dirbrute.md
+    - "07 · Nikto": modules/nikto.md
+    - "08 · SQL Injection": modules/sqli.md
+    - "09 · XSS": modules/xss.md
+    - "10 · CMS Scanning": modules/cms.md
+    - "11 · CORS": modules/cors.md
+    - "12 · Open Redirect": modules/redirect.md
+    - "13 · SSRF": modules/ssrf.md
+    - "14 · Subdomain Takeover": modules/subtakeover.md
+    - "15 · Nuclei": modules/nuclei.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md

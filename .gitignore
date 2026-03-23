@@ -103,3 +103,10 @@ rockyou.txt
 sqlmap_output/
 nikto_reports/
 testssl_output/
+
+# MkDocs
+site/
+.cache/
+__pycache__/
+*.pyc
+.env
