@@ -1,5 +1,5 @@
 ---
-title: WebSec-Audit
+title: Web Security Audit Framework
 description: Professional Web Security Audit Framework — modular, extensible, Bash-native.
 hide:
   - navigation
@@ -7,18 +7,8 @@ hide:
 ---
 
 <div class="ws-hero">
-  <h1>🔐 WebSec-Audit</h1>
+  <h1>WebSec-Audit</h1>
   <p class="ws-tagline">Professional Web Security Audit Framework — modular, extensible, Bash-native</p>
-</div>
-
-<div style="text-align:center;margin-bottom:2.5rem">
-
-[![Version](https://img.shields.io/badge/version-1.0.1-blue?style=flat-square)](https://github.com/davidalvarezp/websec-audit/releases)
-[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](https://github.com/davidalvarezp/websec-audit/blob/main/LICENSE)
-[![Bash](https://img.shields.io/badge/bash-5.0%2B-orange?style=flat-square)](https://www.gnu.org/software/bash/)
-[![Platform](https://img.shields.io/badge/platform-Debian%20%7C%20Ubuntu%20%7C%20Kali-lightgrey?style=flat-square)](https://github.com/davidalvarezp/websec-audit)
-[![CI](https://img.shields.io/github/actions/workflow/status/davidalvarezp/websec-audit/ci.yml?label=CI&style=flat-square)](https://github.com/davidalvarezp/websec-audit/actions)
-
 </div>
 
 !!! danger "Legal Notice"
@@ -28,9 +18,9 @@ hide:
 
 ---
 
-## What is websec-audit?
+## What is WebSec-Audit?
 
-**websec-audit** is a Bash framework that automates comprehensive web application security audits.
+**WebSec-Audit** is a Bash framework that automates comprehensive web application security audits.
 It integrates **15+ independent modules** — from passive reconnaissance to active exploitation —
 and produces professional findings reports in three formats.
 

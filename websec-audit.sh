@@ -2173,7 +2173,7 @@ generate_reports() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>websec-audit — ${TARGET_DOMAIN}</title>
+<title>WebSec-Audit — ${TARGET_DOMAIN}</title>
 <style>
 :root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--br:#30363d;
   --tx:#c9d1d9;--mu:#8b949e;--gn:#3fb950;--bl:#58a6ff;
@@ -2243,7 +2243,7 @@ footer{text-align:center;color:var(--mu);font-size:11px;padding:20px;
 <body>
 <header>
   <div>
-    <h1>🔐 websec-audit — Security Report</h1>
+    <h1>WebSec-Audit — Security Report</h1>
     <div class="sub">${TARGET} &nbsp;|&nbsp; ${DATE_HUMAN} &nbsp;|&nbsp; v${TOOL_VERSION} by ${TOOL_AUTHOR}</div>
   </div>
   <div class="risk">${risk_label}</div>
