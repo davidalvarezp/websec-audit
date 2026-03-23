@@ -13,7 +13,7 @@
 A modular, extensible Bash framework for **comprehensive web application security assessments**.  
 Automates 15+ attack surface modules, generates structured logs, and produces professional reports in HTML, JSON and TXT.
 
-[Features](#-features) · [Installation](#-installation) · [Usage](#-usage) · [Modules](#-modules) · [Output](#-output) · [Contributing](#-contributing)
+[Features](#-features) · [Installation](#-installation) · [Usage](#-usage) · [Modules](#-modules) · [Output](#-output-structure) · [Contributing](#-contributing)
 
 </div>
 
