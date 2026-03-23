@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WebSec-Audit — example.com</title>
+<style>
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--br:#30363d;
+  --tx:#c9d1d9;--mu:#8b949e;--gn:#3fb950;--bl:#58a6ff;
+  --yw:#d29922;--or:#f0883e;--rd:#f85149;
+  --cc:#f44336;--ch:#f0883e;--cm:#d29922;--cl:#42a5f5;--ci:#78909c;
+  --fn:'Segoe UI',system-ui,sans-serif;--fc:'Consolas','Courier New',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:14px;line-height:1.6}
+a{color:var(--bl);text-decoration:none}
+header{background:var(--bg2);border-bottom:1px solid var(--br);
+  padding:18px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+header h1{font-size:20px;color:var(--bl);font-weight:600}
+header .sub{color:var(--mu);font-size:12px;margin-top:3px}
+.risk{padding:6px 16px;border-radius:5px;font-size:12px;font-weight:700;letter-spacing:.6px;
+  background:#f4433622;color:#f44336;border:1px solid #f44336}
+main{max-width:1200px;margin:0 auto;padding:28px 32px}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.card{background:var(--bg2);border:1px solid var(--br);border-radius:8px;padding:16px;text-align:center}
+.card .n{font-size:36px;font-weight:700;line-height:1}
+.card .l{font-size:11px;color:var(--mu);margin-top:5px;text-transform:uppercase;letter-spacing:1px}
+.card.cc{border-color:var(--cc)}.card.cc .n{color:var(--cc)}
+.card.ch{border-color:var(--ch)}.card.ch .n{color:var(--ch)}
+.card.cm{border-color:var(--cm)}.card.cm .n{color:var(--cm)}
+.card.cl{border-color:var(--cl)}.card.cl .n{color:var(--cl)}
+.card.ci .n{color:var(--ci)}
+.rbar{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex;margin-bottom:24px}
+.rc{background:var(--cc)}.rh{background:var(--ch)}.rm{background:var(--cm)}.rl{background:var(--cl)}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+.meta-box{background:var(--bg2);border:1px solid var(--br);border-radius:8px;padding:14px 16px}
+.meta-box h2{font-size:13px;color:var(--mu);margin-bottom:10px;font-weight:500;text-transform:uppercase;letter-spacing:.6px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:12px}
+.kv .k{color:var(--mu)}.kv .v{font-family:var(--fc);color:var(--tx);word-break:break-all}
+h2.sh{font-size:15px;font-weight:600;margin-bottom:12px;padding-left:10px;border-left:3px solid var(--bl)}
+.filter-bar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;align-items:center}
+.fb{padding:4px 12px;border-radius:5px;cursor:pointer;font-size:12px;border:1px solid var(--br);
+  background:var(--bg2);color:var(--mu);transition:all .15s}
+.fb:hover,.fb.active{border-color:var(--bl);color:var(--bl);background:#58a6ff11}
+.sb{margin-left:auto;padding:5px 11px;border-radius:5px;border:1px solid var(--br);
+  background:var(--bg3);color:var(--tx);font-size:12px;width:200px}
+.sb:focus{outline:none;border-color:var(--bl)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--bg3);color:var(--mu);text-align:left;padding:9px 12px;
+  font-weight:500;border-bottom:1px solid var(--br);white-space:nowrap;
+  position:sticky;top:0;z-index:5}
+td{padding:9px 12px;border-bottom:1px solid var(--br);vertical-align:top}
+tr:hover td{background:#ffffff08}
+tr[hidden]{display:none}
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;
+  letter-spacing:.4px;white-space:nowrap}
+.bcc{background:#f4433618;color:var(--cc);border:1px solid var(--cc)}
+.bch{background:#f0883e18;color:var(--ch);border:1px solid var(--ch)}
+.bcm{background:#d2992218;color:var(--cm);border:1px solid var(--cm)}
+.bcl{background:#42a5f518;color:var(--cl);border:1px solid var(--cl)}
+.bci{background:#78909c18;color:var(--ci);border:1px solid var(--ci)}
+.mtag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;
+  background:var(--bg3);color:var(--mu);border:1px solid var(--br);font-family:var(--fc)}
+.ev{font-family:var(--fc);font-size:11px;color:var(--mu);background:var(--bg3);
+  padding:3px 7px;border-radius:3px;margin-top:4px;word-break:break-all;border-left:2px solid var(--br)}
+.fix{font-size:11px;color:var(--gn);margin-top:4px}
+.fix::before{content:"💡 "}
+#empty{text-align:center;padding:40px;color:var(--mu);display:none}
+footer{text-align:center;color:var(--mu);font-size:11px;padding:20px;
+  border-top:1px solid var(--br);margin-top:32px}
+@media(max-width:700px){.cards{grid-template-columns:repeat(3,1fr)}.meta-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>WebSec-Audit — Security Report</h1>
+    <div class="sub">https://example.com &nbsp;|&nbsp; 2026-03-23 16:15:31 &nbsp;|&nbsp; v1.0.1 by davidalvarezp</div>
+  </div>
+  <div class="risk">CRITICAL RISK</div>
+</header>
+<main>
+
+<div class="cards">
+  <div class="card cc"><div class="n">4</div><div class="l">Critical</div></div>
+  <div class="card ch"><div class="n">2</div><div class="l">High</div></div>
+  <div class="card cm"><div class="n">25</div><div class="l">Medium</div></div>
+  <div class="card cl"><div class="n">66</div><div class="l">Low</div></div>
+  <div class="card ci"><div class="n">7</div><div class="l">Info</div></div>
+</div>
+
+<div class="rbar">
+  <div class="rc" style="width:4%"></div>
+  <div class="rh" style="width:2%"></div>
+  <div class="rm" style="width:25%"></div>
+  <div class="rl" style="width:68%"></div>
+</div>
+
+<div class="meta-grid">
+  <div class="meta-box">
+    <h2>Scan Metadata</h2>
+    <div class="kv">
+      <span class="k">Target</span>   <span class="v">https://example.com</span>
+      <span class="k">Domain</span>   <span class="v">example.com</span>
+      <span class="k">IP</span>       <span class="v">104.18.27.120</span>
+      <span class="k">Date</span>     <span class="v">2026-03-23 16:15:31</span>
+      <span class="k">Duration</span> <span class="v">1541s</span>
+      <span class="k">Auditor</span>  <span class="v">root@debian12</span>
+      <span class="k">Mode</span>     <span class="v">NORMAL</span>
+    </div>
+  </div>
+  <div class="meta-box">
+    <h2>Module Status</h2>
+    <div class="kv">
+      <span class="k">Recon</span>       <span class="v">✔ enabled</span>
+      <span class="k">Port Scan</span>   <span class="v">✔ enabled</span>
+      <span class="k">SSL/TLS</span>     <span class="v">✔ enabled</span>
+      <span class="k">Headers</span>     <span class="v">✔ enabled</span>
+      <span class="k">Dir Brute</span>   <span class="v">✔ enabled</span>
+      <span class="k">SQLi / XSS</span> <span class="v">✔ / ✔</span>
+      <span class="k">CMS</span>         <span class="v">✔ enabled</span>
+      <span class="k">Nuclei</span>      <span class="v">✔ enabled</span>
+    </div>
+  </div>
+</div>
+
+<h2 class="sh">Security Findings (104)</h2>
+<div class="filter-bar">
+  <button class="fb active" onclick="filt('ALL',this)">All (104)</button>
+  <button class="fb" onclick="filt('CRITICAL',this)" style="color:var(--cc)">Critical (4)</button>
+  <button class="fb" onclick="filt('HIGH',this)"     style="color:var(--ch)">High (2)</button>
+  <button class="fb" onclick="filt('MEDIUM',this)"   style="color:var(--cm)">Medium (25)</button>
+  <button class="fb" onclick="filt('LOW',this)"      style="color:var(--cl)">Low (66)</button>
+  <button class="fb" onclick="filt('INFO',this)">Info (7)</button>
+  <input class="sb" type="text" placeholder="Search…" oninput="srch(this.value)">
+</div>
+
+<div id="empty">No findings match the current filter.</div>
+<table><thead><tr>
+  <th style="width:36px">#</th>
+  <th style="width:90px">Severity</th>
+  <th style="width:100px">Module</th>
+  <th>Finding</th>
+  <th style="width:130px">Timestamp</th>
+</tr></thead><tbody id="tbody">
+<tr data-sev="INFO" data-q="info init audit started against https://example.com resolved ip: 104.18.27.120 | mode: normal">
+<td>1</td>
+<td><span class="badge bci">INFO</span></td>
+<td><span class="mtag">INIT</span></td>
+<td><strong>Audit started against https://example.com</strong><br><small style="color:var(--mu)">Resolved IP: 104.18.27.120 | Mode: NORMAL</small></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:15:36Z</td>
+</tr>
+<tr data-sev="INFO" data-q="info recon whois data collected for example.com registrar: n/a | expiry: 2026-08-13">
+<td>2</td>
+<td><span class="badge bci">INFO</span></td>
+<td><span class="mtag">RECON</span></td>
+<td><strong>WHOIS data collected for example.com</strong><br><small style="color:var(--mu)">Registrar: N/A | Expiry: 2026-08-13</small></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:15:36Z</td>
+</tr>
+<tr data-sev="INFO" data-q="info recon subdomain enumeration: 37616 hosts discovered 0000.example.com 001.example.com 01.example.com 02.example.com 03.example.com 03----may----rrdd.example.com 04.example.com 05----apr----rrdd.example.com 05.example.com 06----apr----rrdd.example.com ">
+<td>3</td>
+<td><span class="badge bci">INFO</span></td>
+<td><span class="mtag">RECON</span></td>
+<td><strong>Subdomain enumeration: 37616 hosts discovered</strong><br><small style="color:var(--mu)">0000.example.com 001.example.com 01.example.com 02.example.com 03.example.com 03----may----rrdd.example.com 04.example.com 05----apr----rrdd.example.com 05.example.com 06----apr----rrdd.example.com </small><div class="ev">/root/websec-audit/results_example_com_20260323_161531/recon/subdomains.txt</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:16:22Z</td>
+</tr>
+<tr data-sev="INFO" data-q="info fingerprint waf detected: cloudflare (cloudflare inc.) waf. the target appears to be protected by a web application firewall.">
+<td>4</td>
+<td><span class="badge bci">INFO</span></td>
+<td><span class="mtag">FINGERPRINT</span></td>
+<td><strong>WAF detected: Cloudflare (Cloudflare Inc.) WAF.</strong><br><small style="color:var(--mu)">The target appears to be protected by a Web Application Firewall.</small><div class="ev">Cloudflare (Cloudflare Inc.) WAF.</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:16:25Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low fingerprint version disclosure via 'server' header the server reveals technology/version info in response headers.">
+<td>5</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">FINGERPRINT</span></td>
+<td><strong>Version disclosure via 'Server' header</strong><br><small style="color:var(--mu)">The server reveals technology/version info in response headers.</small><div class="ev</div><div class="fix">Remove or neutralise the 'Server' header in your web server configuration.</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:16:25Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [tls1] offered (deprecated) ">
+<td>6</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [TLS1] offered (deprecated)</strong><div class="fix">Refer to testssl documentation for TLS1</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [tls1_1] offered (deprecated) ">
+<td>7</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [TLS1_1] offered (deprecated)</strong><div class="fix">Refer to testssl documentation for TLS1_1</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cipherlist_3des_idea] offered ">
+<td>8</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipherlist_3DES_IDEA] offered</strong><div class="fix">Refer to testssl documentation for cipherlist_3DES_IDEA</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipherlist_obsoleted] offered ">
+<td>9</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipherlist_OBSOLETED] offered</strong><div class="fix">Refer to testssl documentation for cipherlist_OBSOLETED</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_xc013] tlsv1   xc013   ecdhe-rsa-aes128-sha              ecdh 256   aes         128      tls_ecdhe_rsa_with_aes_128_cbc_sha ">
+<td>10</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_xc013] TLSv1   xc013   ECDHE-RSA-AES128-SHA              ECDH 256   AES         128      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_xc013</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_x2f] tlsv1   x2f     aes128-sha                        rsa        aes         128      tls_rsa_with_aes_128_cbc_sha ">
+<td>11</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_x2f] TLSv1   x2f     AES128-SHA                        RSA        AES         128      TLS_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_x2f</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_xc014] tlsv1   xc014   ecdhe-rsa-aes256-sha              ecdh 256   aes         256      tls_ecdhe_rsa_with_aes_256_cbc_sha ">
+<td>12</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_xc014] TLSv1   xc014   ECDHE-RSA-AES256-SHA              ECDH 256   AES         256      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_xc014</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_x35] tlsv1   x35     aes256-sha                        rsa        aes         256      tls_rsa_with_aes_256_cbc_sha ">
+<td>13</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_x35] TLSv1   x35     AES256-SHA                        RSA        AES         256      TLS_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_x35</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cipher-tls1_x0a] tlsv1   x0a     des-cbc3-sha                      rsa        3des        168      tls_rsa_with_3des_ede_cbc_sha ">
+<td>14</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_x0a] TLSv1   x0a     DES-CBC3-SHA                      RSA        3DES        168      TLS_RSA_WITH_3DES_EDE_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_x0a</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_1_xc013] tlsv1.1   xc013   ecdhe-rsa-aes128-sha              ecdh 256   aes         128      tls_ecdhe_rsa_with_aes_128_cbc_sha ">
+<td>15</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_1_xc013] TLSv1.1   xc013   ECDHE-RSA-AES128-SHA              ECDH 256   AES         128      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_1_xc013</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_1_x2f] tlsv1.1   x2f     aes128-sha                        rsa        aes         128      tls_rsa_with_aes_128_cbc_sha ">
+<td>16</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_1_x2f] TLSv1.1   x2f     AES128-SHA                        RSA        AES         128      TLS_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_1_x2f</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_1_xc014] tlsv1.1   xc014   ecdhe-rsa-aes256-sha              ecdh 256   aes         256      tls_ecdhe_rsa_with_aes_256_cbc_sha ">
+<td>17</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_1_xc014] TLSv1.1   xc014   ECDHE-RSA-AES256-SHA              ECDH 256   AES         256      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_1_xc014</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_1_x35] tlsv1.1   x35     aes256-sha                        rsa        aes         256      tls_rsa_with_aes_256_cbc_sha ">
+<td>18</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_1_x35] TLSv1.1   x35     AES256-SHA                        RSA        AES         256      TLS_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_1_x35</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc009] tlsv1.2   xc009   ecdhe-ecdsa-aes128-sha            ecdh 253   aes         128      tls_ecdhe_ecdsa_with_aes_128_cbc_sha ">
+<td>19</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc009] TLSv1.2   xc009   ECDHE-ECDSA-AES128-SHA            ECDH 253   AES         128      TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc009</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc00a] tlsv1.2   xc00a   ecdhe-ecdsa-aes256-sha            ecdh 253   aes         256      tls_ecdhe_ecdsa_with_aes_256_cbc_sha ">
+<td>20</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc00a] TLSv1.2   xc00a   ECDHE-ECDSA-AES256-SHA            ECDH 253   AES         256      TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc00a</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc023] tlsv1.2   xc023   ecdhe-ecdsa-aes128-sha256         ecdh 253   aes         128      tls_ecdhe_ecdsa_with_aes_128_cbc_sha ">
+<td>21</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc023] TLSv1.2   xc023   ECDHE-ECDSA-AES128-SHA256         ECDH 253   AES         128      TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc023</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc024] tlsv1.2   xc024   ecdhe-ecdsa-aes256-sha384         ecdh 253   aes         256      tls_ecdhe_ecdsa_with_aes_256_cbc_sha ">
+<td>22</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc024] TLSv1.2   xc024   ECDHE-ECDSA-AES256-SHA384         ECDH 253   AES         256      TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc024</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:44Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc013] tlsv1.2   xc013   ecdhe-rsa-aes128-sha              ecdh 253   aes         128      tls_ecdhe_rsa_with_aes_128_cbc_sha ">
+<td>23</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc013] TLSv1.2   xc013   ECDHE-RSA-AES128-SHA              ECDH 253   AES         128      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc013</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_x2f] tlsv1.2   x2f     aes128-sha                        rsa        aes         128      tls_rsa_with_aes_128_cbc_sha ">
+<td>24</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_x2f] TLSv1.2   x2f     AES128-SHA                        RSA        AES         128      TLS_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_x2f</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc014] tlsv1.2   xc014   ecdhe-rsa-aes256-sha              ecdh 253   aes         256      tls_ecdhe_rsa_with_aes_256_cbc_sha ">
+<td>25</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc014] TLSv1.2   xc014   ECDHE-RSA-AES256-SHA              ECDH 253   AES         256      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc014</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_x35] tlsv1.2   x35     aes256-sha                        rsa        aes         256      tls_rsa_with_aes_256_cbc_sha ">
+<td>26</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_x35] TLSv1.2   x35     AES256-SHA                        RSA        AES         256      TLS_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_x35</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc027] tlsv1.2   xc027   ecdhe-rsa-aes128-sha256           ecdh 253   aes         128      tls_ecdhe_rsa_with_aes_128_cbc_sha25 ">
+<td>27</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc027] TLSv1.2   xc027   ECDHE-RSA-AES128-SHA256           ECDH 253   AES         128      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA25</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc027</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_x3c] tlsv1.2   x3c     aes128-sha256                     rsa        aes         128      tls_rsa_with_aes_128_cbc_sha256 ">
+<td>28</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_x3c] TLSv1.2   x3c     AES128-SHA256                     RSA        AES         128      TLS_RSA_WITH_AES_128_CBC_SHA256</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_x3c</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc028] tlsv1.2   xc028   ecdhe-rsa-aes256-sha384           ecdh 253   aes         256      tls_ecdhe_rsa_with_aes_256_cbc_sha38 ">
+<td>29</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc028] TLSv1.2   xc028   ECDHE-RSA-AES256-SHA384           ECDH 253   AES         256      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA38</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc028</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_x3d] tlsv1.2   x3d     aes256-sha256                     rsa        aes         256      tls_rsa_with_aes_256_cbc_sha256 ">
+<td>30</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_x3d] TLSv1.2   x3d     AES256-SHA256                     RSA        AES         256      TLS_RSA_WITH_AES_256_CBC_SHA256</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_x3d</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="HIGH" data-q="high ssl testssl: [cert_keyusage <hostcert#1>] certificate incorrectly used for key encipherment: 'digital signature' ">
+<td>31</td>
+<td><span class="badge bch">HIGH</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_keyUsage &lt;hostCert#1&gt;] Certificate incorrectly used for key encipherment: 'Digital Signature'</strong><div class="fix">Refer to testssl documentation for cert_keyUsage &lt;hostCert#1&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="CRITICAL" data-q="critical ssl testssl: [cert_chain_of_trust <hostcert#1>] some certificate trust checks failed -> mozilla (chain incomplete)  , ok -> microsoft linux java apple ">
+<td>32</td>
+<td><span class="badge bcc">CRITICAL</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_chain_of_trust &lt;hostCert#1&gt;] Some certificate trust checks failed -&gt; Mozilla (chain incomplete)  , OK -&gt; Microsoft Linux Java Apple</strong><div class="fix">Refer to testssl documentation for cert_chain_of_trust &lt;hostCert#1&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cert_expirationstatus <hostcert#1>] expires < 60 days (52) ">
+<td>33</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_expirationStatus &lt;hostCert#1&gt;] expires &lt; 60 days (52)</strong><div class="fix">Refer to testssl documentation for cert_expirationStatus &lt;hostCert#1&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cert_notafter <hostcert#1>] 2026-05-14 18:57 ">
+<td>34</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_notAfter &lt;hostCert#1&gt;] 2026-05-14 18:57</strong><div class="fix">Refer to testssl documentation for cert_notAfter &lt;hostCert#1&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [dns_caarecord <hostcert#1>] -- ">
+<td>35</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [DNS_CAArecord &lt;hostCert#1&gt;] --</strong><div class="fix">Refer to testssl documentation for DNS_CAArecord &lt;hostCert#1&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="CRITICAL" data-q="critical ssl testssl: [cert_chain_of_trust <hostcert#2>] some certificate trust checks failed -> mozilla (chain incomplete)  , ok -> microsoft linux java apple ">
+<td>36</td>
+<td><span class="badge bcc">CRITICAL</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_chain_of_trust &lt;hostCert#2&gt;] Some certificate trust checks failed -&gt; Mozilla (chain incomplete)  , OK -&gt; Microsoft Linux Java Apple</strong><div class="fix">Refer to testssl documentation for cert_chain_of_trust &lt;hostCert#2&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cert_expirationstatus <hostcert#2>] expires < 60 days (52) ">
+<td>37</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_expirationStatus &lt;hostCert#2&gt;] expires &lt; 60 days (52)</strong><div class="fix">Refer to testssl documentation for cert_expirationStatus &lt;hostCert#2&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cert_notafter <hostcert#2>] 2026-05-14 18:57 ">
+<td>38</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_notAfter &lt;hostCert#2&gt;] 2026-05-14 18:57</strong><div class="fix">Refer to testssl documentation for cert_notAfter &lt;hostCert#2&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [dns_caarecord <hostcert#2>] -- ">
+<td>39</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [DNS_CAArecord &lt;hostCert#2&gt;] --</strong><div class="fix">Refer to testssl documentation for DNS_CAArecord &lt;hostCert#2&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:45Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [hsts] not offered ">
+<td>40</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [HSTS] not offered</strong><div class="fix">Refer to testssl documentation for HSTS</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [security_headers] -- ">
+<td>41</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [security_headers] --</strong><div class="fix">Refer to testssl documentation for security_headers</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [breach] potentially vulnerable, gzip http compression detected  - only supplied '/' tested ">
+<td>42</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [BREACH] potentially VULNERABLE, gzip HTTP compression detected  - only supplied '/' tested</strong><div class="fix">Refer to testssl documentation for BREACH</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [sweet32] uses 64 bit block ciphers ">
+<td>43</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [SWEET32] uses 64 bit block ciphers</strong><div class="fix">Refer to testssl documentation for SWEET32</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [beast_cbc_tls1] ecdhe-rsa-aes128-sha aes128-sha ecdhe-rsa-aes256-sha aes256-sha des-cbc3-sha ">
+<td>44</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [BEAST_CBC_TLS1] ECDHE-RSA-AES128-SHA AES128-SHA ECDHE-RSA-AES256-SHA AES256-SHA DES-CBC3-SHA</strong><div class="fix">Refer to testssl documentation for BEAST_CBC_TLS1</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [beast] vulnerable -- but also supports higher protocols  tlsv1.1 tlsv1.2 (likely mitigated) ">
+<td>45</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [BEAST] VULNERABLE -- but also supports higher protocols  TLSv1.1 TLSv1.2 (likely mitigated)</strong><div class="fix">Refer to testssl documentation for BEAST</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [lucky13] potentially vulnerable, uses tls cbc ciphers ">
+<td>46</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [LUCKY13] potentially vulnerable, uses TLS CBC ciphers</strong><div class="fix">Refer to testssl documentation for LUCKY13</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [overall_grade] b ">
+<td>47</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [overall_grade] B</strong><div class="fix">Refer to testssl documentation for overall_grade</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [tls1] offered (deprecated) ">
+<td>48</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [TLS1] offered (deprecated)</strong><div class="fix">Refer to testssl documentation for TLS1</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [tls1_1] offered (deprecated) ">
+<td>49</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [TLS1_1] offered (deprecated)</strong><div class="fix">Refer to testssl documentation for TLS1_1</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cipherlist_3des_idea] offered ">
+<td>50</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipherlist_3DES_IDEA] offered</strong><div class="fix">Refer to testssl documentation for cipherlist_3DES_IDEA</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipherlist_obsoleted] offered ">
+<td>51</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipherlist_OBSOLETED] offered</strong><div class="fix">Refer to testssl documentation for cipherlist_OBSOLETED</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_xc013] tlsv1   xc013   ecdhe-rsa-aes128-sha              ecdh 256   aes         128      tls_ecdhe_rsa_with_aes_128_cbc_sha ">
+<td>52</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_xc013] TLSv1   xc013   ECDHE-RSA-AES128-SHA              ECDH 256   AES         128      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_xc013</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_x2f] tlsv1   x2f     aes128-sha                        rsa        aes         128      tls_rsa_with_aes_128_cbc_sha ">
+<td>53</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_x2f] TLSv1   x2f     AES128-SHA                        RSA        AES         128      TLS_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_x2f</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_xc014] tlsv1   xc014   ecdhe-rsa-aes256-sha              ecdh 256   aes         256      tls_ecdhe_rsa_with_aes_256_cbc_sha ">
+<td>54</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_xc014] TLSv1   xc014   ECDHE-RSA-AES256-SHA              ECDH 256   AES         256      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_xc014</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_x35] tlsv1   x35     aes256-sha                        rsa        aes         256      tls_rsa_with_aes_256_cbc_sha ">
+<td>55</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_x35] TLSv1   x35     AES256-SHA                        RSA        AES         256      TLS_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_x35</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cipher-tls1_x0a] tlsv1   x0a     des-cbc3-sha                      rsa        3des        168      tls_rsa_with_3des_ede_cbc_sha ">
+<td>56</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_x0a] TLSv1   x0a     DES-CBC3-SHA                      RSA        3DES        168      TLS_RSA_WITH_3DES_EDE_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_x0a</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:46Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_1_xc013] tlsv1.1   xc013   ecdhe-rsa-aes128-sha              ecdh 256   aes         128      tls_ecdhe_rsa_with_aes_128_cbc_sha ">
+<td>57</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_1_xc013] TLSv1.1   xc013   ECDHE-RSA-AES128-SHA              ECDH 256   AES         128      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_1_xc013</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_1_x2f] tlsv1.1   x2f     aes128-sha                        rsa        aes         128      tls_rsa_with_aes_128_cbc_sha ">
+<td>58</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_1_x2f] TLSv1.1   x2f     AES128-SHA                        RSA        AES         128      TLS_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_1_x2f</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_1_xc014] tlsv1.1   xc014   ecdhe-rsa-aes256-sha              ecdh 256   aes         256      tls_ecdhe_rsa_with_aes_256_cbc_sha ">
+<td>59</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_1_xc014] TLSv1.1   xc014   ECDHE-RSA-AES256-SHA              ECDH 256   AES         256      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_1_xc014</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_1_x35] tlsv1.1   x35     aes256-sha                        rsa        aes         256      tls_rsa_with_aes_256_cbc_sha ">
+<td>60</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_1_x35] TLSv1.1   x35     AES256-SHA                        RSA        AES         256      TLS_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_1_x35</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc009] tlsv1.2   xc009   ecdhe-ecdsa-aes128-sha            ecdh 253   aes         128      tls_ecdhe_ecdsa_with_aes_128_cbc_sha ">
+<td>61</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc009] TLSv1.2   xc009   ECDHE-ECDSA-AES128-SHA            ECDH 253   AES         128      TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc009</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc00a] tlsv1.2   xc00a   ecdhe-ecdsa-aes256-sha            ecdh 253   aes         256      tls_ecdhe_ecdsa_with_aes_256_cbc_sha ">
+<td>62</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc00a] TLSv1.2   xc00a   ECDHE-ECDSA-AES256-SHA            ECDH 253   AES         256      TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc00a</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc023] tlsv1.2   xc023   ecdhe-ecdsa-aes128-sha256         ecdh 253   aes         128      tls_ecdhe_ecdsa_with_aes_128_cbc_sha ">
+<td>63</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc023] TLSv1.2   xc023   ECDHE-ECDSA-AES128-SHA256         ECDH 253   AES         128      TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc023</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc024] tlsv1.2   xc024   ecdhe-ecdsa-aes256-sha384         ecdh 253   aes         256      tls_ecdhe_ecdsa_with_aes_256_cbc_sha ">
+<td>64</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc024] TLSv1.2   xc024   ECDHE-ECDSA-AES256-SHA384         ECDH 253   AES         256      TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc024</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc013] tlsv1.2   xc013   ecdhe-rsa-aes128-sha              ecdh 253   aes         128      tls_ecdhe_rsa_with_aes_128_cbc_sha ">
+<td>65</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc013] TLSv1.2   xc013   ECDHE-RSA-AES128-SHA              ECDH 253   AES         128      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc013</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_x2f] tlsv1.2   x2f     aes128-sha                        rsa        aes         128      tls_rsa_with_aes_128_cbc_sha ">
+<td>66</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_x2f] TLSv1.2   x2f     AES128-SHA                        RSA        AES         128      TLS_RSA_WITH_AES_128_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_x2f</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc014] tlsv1.2   xc014   ecdhe-rsa-aes256-sha              ecdh 253   aes         256      tls_ecdhe_rsa_with_aes_256_cbc_sha ">
+<td>67</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc014] TLSv1.2   xc014   ECDHE-RSA-AES256-SHA              ECDH 253   AES         256      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc014</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_x35] tlsv1.2   x35     aes256-sha                        rsa        aes         256      tls_rsa_with_aes_256_cbc_sha ">
+<td>68</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_x35] TLSv1.2   x35     AES256-SHA                        RSA        AES         256      TLS_RSA_WITH_AES_256_CBC_SHA</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_x35</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc027] tlsv1.2   xc027   ecdhe-rsa-aes128-sha256           ecdh 253   aes         128      tls_ecdhe_rsa_with_aes_128_cbc_sha25 ">
+<td>69</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc027] TLSv1.2   xc027   ECDHE-RSA-AES128-SHA256           ECDH 253   AES         128      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA25</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc027</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_x3c] tlsv1.2   x3c     aes128-sha256                     rsa        aes         128      tls_rsa_with_aes_128_cbc_sha256 ">
+<td>70</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_x3c] TLSv1.2   x3c     AES128-SHA256                     RSA        AES         128      TLS_RSA_WITH_AES_128_CBC_SHA256</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_x3c</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_xc028] tlsv1.2   xc028   ecdhe-rsa-aes256-sha384           ecdh 253   aes         256      tls_ecdhe_rsa_with_aes_256_cbc_sha38 ">
+<td>71</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_xc028] TLSv1.2   xc028   ECDHE-RSA-AES256-SHA384           ECDH 253   AES         256      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA38</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_xc028</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [cipher-tls1_2_x3d] tlsv1.2   x3d     aes256-sha256                     rsa        aes         256      tls_rsa_with_aes_256_cbc_sha256 ">
+<td>72</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cipher-tls1_2_x3d] TLSv1.2   x3d     AES256-SHA256                     RSA        AES         256      TLS_RSA_WITH_AES_256_CBC_SHA256</strong><div class="fix">Refer to testssl documentation for cipher-tls1_2_x3d</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="HIGH" data-q="high ssl testssl: [cert_keyusage <hostcert#1>] certificate incorrectly used for key encipherment: 'digital signature' ">
+<td>73</td>
+<td><span class="badge bch">HIGH</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_keyUsage &lt;hostCert#1&gt;] Certificate incorrectly used for key encipherment: 'Digital Signature'</strong><div class="fix">Refer to testssl documentation for cert_keyUsage &lt;hostCert#1&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="CRITICAL" data-q="critical ssl testssl: [cert_chain_of_trust <hostcert#1>] some certificate trust checks failed -> mozilla (chain incomplete)  , ok -> microsoft linux java apple ">
+<td>74</td>
+<td><span class="badge bcc">CRITICAL</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_chain_of_trust &lt;hostCert#1&gt;] Some certificate trust checks failed -&gt; Mozilla (chain incomplete)  , OK -&gt; Microsoft Linux Java Apple</strong><div class="fix">Refer to testssl documentation for cert_chain_of_trust &lt;hostCert#1&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cert_expirationstatus <hostcert#1>] expires < 60 days (52) ">
+<td>75</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_expirationStatus &lt;hostCert#1&gt;] expires &lt; 60 days (52)</strong><div class="fix">Refer to testssl documentation for cert_expirationStatus &lt;hostCert#1&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:47Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cert_notafter <hostcert#1>] 2026-05-14 18:57 ">
+<td>76</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_notAfter &lt;hostCert#1&gt;] 2026-05-14 18:57</strong><div class="fix">Refer to testssl documentation for cert_notAfter &lt;hostCert#1&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [dns_caarecord <hostcert#1>] -- ">
+<td>77</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [DNS_CAArecord &lt;hostCert#1&gt;] --</strong><div class="fix">Refer to testssl documentation for DNS_CAArecord &lt;hostCert#1&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="CRITICAL" data-q="critical ssl testssl: [cert_chain_of_trust <hostcert#2>] some certificate trust checks failed -> mozilla (chain incomplete)  , ok -> microsoft linux java apple ">
+<td>78</td>
+<td><span class="badge bcc">CRITICAL</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_chain_of_trust &lt;hostCert#2&gt;] Some certificate trust checks failed -&gt; Mozilla (chain incomplete)  , OK -&gt; Microsoft Linux Java Apple</strong><div class="fix">Refer to testssl documentation for cert_chain_of_trust &lt;hostCert#2&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cert_expirationstatus <hostcert#2>] expires < 60 days (52) ">
+<td>79</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_expirationStatus &lt;hostCert#2&gt;] expires &lt; 60 days (52)</strong><div class="fix">Refer to testssl documentation for cert_expirationStatus &lt;hostCert#2&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [cert_notafter <hostcert#2>] 2026-05-14 18:57 ">
+<td>80</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [cert_notAfter &lt;hostCert#2&gt;] 2026-05-14 18:57</strong><div class="fix">Refer to testssl documentation for cert_notAfter &lt;hostCert#2&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [dns_caarecord <hostcert#2>] -- ">
+<td>81</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [DNS_CAArecord &lt;hostCert#2&gt;] --</strong><div class="fix">Refer to testssl documentation for DNS_CAArecord &lt;hostCert#2&gt;</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [hsts] not offered ">
+<td>82</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [HSTS] not offered</strong><div class="fix">Refer to testssl documentation for HSTS</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [security_headers] -- ">
+<td>83</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [security_headers] --</strong><div class="fix">Refer to testssl documentation for security_headers</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [breach] potentially vulnerable, gzip http compression detected  - only supplied '/' tested ">
+<td>84</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [BREACH] potentially VULNERABLE, gzip HTTP compression detected  - only supplied '/' tested</strong><div class="fix">Refer to testssl documentation for BREACH</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [sweet32] uses 64 bit block ciphers ">
+<td>85</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [SWEET32] uses 64 bit block ciphers</strong><div class="fix">Refer to testssl documentation for SWEET32</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [beast_cbc_tls1] ecdhe-rsa-aes128-sha aes128-sha ecdhe-rsa-aes256-sha aes256-sha des-cbc3-sha ">
+<td>86</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [BEAST_CBC_TLS1] ECDHE-RSA-AES128-SHA AES128-SHA ECDHE-RSA-AES256-SHA AES256-SHA DES-CBC3-SHA</strong><div class="fix">Refer to testssl documentation for BEAST_CBC_TLS1</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [beast] vulnerable -- but also supports higher protocols  tlsv1.1 tlsv1.2 (likely mitigated) ">
+<td>87</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [BEAST] VULNERABLE -- but also supports higher protocols  TLSv1.1 TLSv1.2 (likely mitigated)</strong><div class="fix">Refer to testssl documentation for BEAST</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low ssl testssl: [lucky13] potentially vulnerable, uses tls cbc ciphers ">
+<td>88</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [LUCKY13] potentially vulnerable, uses TLS CBC ciphers</strong><div class="fix">Refer to testssl documentation for LUCKY13</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl testssl: [overall_grade] b ">
+<td>89</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>testssl: [overall_grade] B</strong><div class="fix">Refer to testssl documentation for overall_grade</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl certificate expires in 52 days ">
+<td>90</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>Certificate expires in 52 days</strong><div class="ev">May 14 18:57:50 2026 GMT</div><div class="fix">Plan certificate renewal.</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:48Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium ssl hsts header not configured strict-transport-security is absent — browsers may access the site over http.">
+<td>91</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">SSL</span></td>
+<td><strong>HSTS header not configured</strong><br><small style="color:var(--mu)">Strict-Transport-Security is absent — browsers may access the site over HTTP.</small><div class="fix">Add: Strict-Transport-Security: max-age=63072000; includeSubDomains; preload</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:49Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low headers permissions-policy missing the response is missing the 'permissions-policy' security header.">
+<td>92</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">HEADERS</span></td>
+<td><strong>Permissions-Policy missing</strong><br><small style="color:var(--mu)">The response is missing the 'permissions-policy' security header.</small><div class="fix">Add: Permissions-Policy: geolocation=(), microphone=(), camera=()</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:49Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low headers cross-origin-resource-policy (corp) missing the response is missing the 'cross-origin-resource-policy' security header.">
+<td>93</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">HEADERS</span></td>
+<td><strong>Cross-Origin-Resource-Policy (CORP) missing</strong><br><small style="color:var(--mu)">The response is missing the 'cross-origin-resource-policy' security header.</small><div class="fix">Add: Cross-Origin-Resource-Policy: same-origin</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:49Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low headers cross-origin-opener-policy (coop) missing the response is missing the 'cross-origin-opener-policy' security header.">
+<td>94</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">HEADERS</span></td>
+<td><strong>Cross-Origin-Opener-Policy (COOP) missing</strong><br><small style="color:var(--mu)">The response is missing the 'cross-origin-opener-policy' security header.</small><div class="fix">Add: Cross-Origin-Opener-Policy: same-origin</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:49Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low headers x-content-type-options missing — mime sniffing risk the response is missing the 'x-content-type-options' security header.">
+<td>95</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">HEADERS</span></td>
+<td><strong>X-Content-Type-Options missing — MIME sniffing risk</strong><br><small style="color:var(--mu)">The response is missing the 'x-content-type-options' security header.</small><div class="fix">Add: X-Content-Type-Options: nosniff</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:49Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium headers x-frame-options missing — clickjacking risk the response is missing the 'x-frame-options' security header.">
+<td>96</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">HEADERS</span></td>
+<td><strong>X-Frame-Options missing — clickjacking risk</strong><br><small style="color:var(--mu)">The response is missing the 'x-frame-options' security header.</small><div class="fix">Add: X-Frame-Options: SAMEORIGIN</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:49Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium headers content-security-policy (csp) missing the response is missing the 'content-security-policy' security header.">
+<td>97</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">HEADERS</span></td>
+<td><strong>Content-Security-Policy (CSP) missing</strong><br><small style="color:var(--mu)">The response is missing the 'content-security-policy' security header.</small><div class="fix">Implement a strict CSP to mitigate XSS and data injection attacks.</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:49Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low headers referrer-policy missing the response is missing the 'referrer-policy' security header.">
+<td>98</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">HEADERS</span></td>
+<td><strong>Referrer-Policy missing</strong><br><small style="color:var(--mu)">The response is missing the 'referrer-policy' security header.</small><div class="fix">Add: Referrer-Policy: strict-origin-when-cross-origin</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:49Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low headers informative header exposed: server server reveals technology details via 'server' header.">
+<td>99</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">HEADERS</span></td>
+<td><strong>Informative header exposed: Server</strong><br><small style="color:var(--mu)">Server reveals technology details via 'Server' header.</small><div class="ev">server: clo</div><div class="fix">Remove or anonymise the 'Server' header in your server configuration.</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:49Z</td>
+</tr>
+<tr data-sev="MEDIUM" data-q="medium headers http does not redirect to https (http 200) requests over http are not automatically upgraded to https.">
+<td>100</td>
+<td><span class="badge bcm">MEDIUM</span></td>
+<td><span class="mtag">HEADERS</span></td>
+<td><strong>HTTP does not redirect to HTTPS (HTTP 200)</strong><br><small style="color:var(--mu)">Requests over HTTP are not automatically upgraded to HTTPS.</small><div class="ev">http://example.com → 200</div><div class="fix">Configure a permanent 301 redirect from HTTP to HTTPS.</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:49Z</td>
+</tr>
+<tr data-sev="LOW" data-q="low headers cache-control header missing without cache-control, sensitive pages may be cached by intermediaries.">
+<td>101</td>
+<td><span class="badge bcl">LOW</span></td>
+<td><span class="mtag">HEADERS</span></td>
+<td><strong>Cache-Control header missing</strong><br><small style="color:var(--mu)">Without Cache-Control, sensitive pages may be cached by intermediaries.</small><div class="fix">Add: Cache-Control: no-store, no-cache on authenticated/sensitive pages.</div></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:19:49Z</td>
+</tr>
+<tr data-sev="INFO" data-q="info sqli no obvious sqli on primary url manual testing with specific parameters recommended.">
+<td>102</td>
+<td><span class="badge bci">INFO</span></td>
+<td><span class="mtag">SQLI</span></td>
+<td><strong>No obvious SQLi on primary URL</strong><br><small style="color:var(--mu)">Manual testing with specific parameters recommended.</small></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:20:05Z</td>
+</tr>
+<tr data-sev="INFO" data-q="info cms cms detected: unknown ">
+<td>103</td>
+<td><span class="badge bci">INFO</span></td>
+<td><span class="mtag">CMS</span></td>
+<td><strong>CMS detected: unknown</strong></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:21:12Z</td>
+</tr>
+<tr data-sev="INFO" data-q="info ssrf no in-band ssrf detected on common parameters out-of-band (oob) ssrf may still exist. use burp collaborator or interactsh for blind testing.">
+<td>104</td>
+<td><span class="badge bci">INFO</span></td>
+<td><span class="mtag">SSRF</span></td>
+<td><strong>No in-band SSRF detected on common parameters</strong><br><small style="color:var(--mu)">Out-of-band (OOB) SSRF may still exist. Use Burp Collaborator or Interactsh for blind testing.</small></td>
+<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">2026-03-23T15:26:05Z</td>
+</tr>
+</tbody></table>
+</main>
+<footer>Generated by <strong>websec-audit</strong> v1.0.1 — <a href="https://github.com/davidalvarezp/websec-audit">https://github.com/davidalvarezp/websec-audit</a> — Authorised use only</footer>
+<script>
+var cur='ALL',srchTerm='';
+function filt(s,btn){
+  cur=s;
+  document.querySelectorAll('.fb').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+  update();
+}
+function srch(v){srchTerm=v.toLowerCase();update();}
+function update(){
+  var rows=document.querySelectorAll('#tbody tr'),vis=0;
+  rows.forEach(function(r){
+    var sm=cur==='ALL'||r.dataset.sev===cur;
+    var qm=!srchTerm||(r.dataset.q||'').includes(srchTerm);
+    r.hidden=!(sm&&qm);
+    if(sm&&qm)vis++;
+  });
+  document.getElementById('empty').style.display=vis===0?'':'none';
+}
+</script>
+</body></html>
