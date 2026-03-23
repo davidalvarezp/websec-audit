@@ -15,11 +15,6 @@ Automates 15+ attack surface modules, generates structured logs, and produces pr
 
 [Features](#-features) · [Installation](#-installation) · [Usage](#-usage) · [Modules](#-modules) · [Output](#-output-structure) · [Contributing](#-contributing)
 
----
-![WebSec-Audit Start](https://raw.githubusercontent.com/davidalvarezp/websec-audit/main/demo/1_start.png)
-
-![WebSec-Audit End](https://raw.githubusercontent.com/davidalvarezp/websec-audit/main/demo/2_end.png)
-
 </div>
 
 ---
