@@ -1993,16 +1993,120 @@ module_nuclei() {
 # ─────────────────────────────────────────────────────────────────────────────
 #  REPORT GENERATOR
 # ─────────────────────────────────────────────────────────────────────────────
+
+
 generate_reports() {
   log_section "GENERATING REPORTS"
-
-  local do_all=1
-  [[ -n "$OPT_OUTPUT_ONLY" && "$OPT_OUTPUT_ONLY" != "all" ]] && do_all=0
-
-  local elapsed; elapsed=$(elapsed_secs)
-
-  # ── JSON REPORT ─────────────────────────────────────────────────────────────
-  if [[ $do_all -eq 1 || "$OPT_OUTPUT_ONLY" == "json" ]]; then
+ 
+  local elapsed
+  elapsed=$(elapsed_secs)
+ 
+  # ── Determine which formats to produce ──────────────────────────────────────
+  local do_json=1 do_html=1 do_txt=1
+  case "${OPT_OUTPUT_ONLY:-all}" in
+    json) do_html=0; do_txt=0 ;;
+    html) do_json=0; do_txt=0 ;;
+    txt)  do_json=0; do_html=0 ;;
+  esac
+ 
+  # ── Helpers ─────────────────────────────────────────────────────────────────
+ 
+  # Parse a field from a JSONL line — works with jq OR python3 OR grep fallback
+  _get_field() {
+    local line="$1" field="$2" default="${3:-}"
+    local val=""
+ 
+    if has_tool jq; then
+      val=$(printf '%s' "$line" | jq -r ".${field} // empty" 2>/dev/null || true)
+    fi
+ 
+    if [[ -z "$val" ]] && has_tool python3; then
+      val=$(printf '%s' "$line" | python3 -c \
+        "import json,sys; d=json.load(sys.stdin); print(d.get('${field}',''))" 2>/dev/null || true)
+    fi
+ 
+    if [[ -z "$val" ]]; then
+      # grep fallback — extracts "field":"value"
+      val=$(printf '%s' "$line" | grep -oP "\"${field}\":\s*\"?\K[^\",}]+" | head -1 || true)
+    fi
+ 
+    printf '%s' "${val:-$default}"
+  }
+ 
+  # HTML-escape a string
+  _hesc() {
+    printf '%s' "$1" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g'
+  }
+ 
+  # ────────────────────────────────────────────────────────────────────────────
+  # TXT REPORT
+  # ────────────────────────────────────────────────────────────────────────────
+  if [[ $do_txt -eq 1 ]]; then
+    {
+      local sep="════════════════════════════════════════════════════════════════"
+      echo "$sep"
+      echo "  WEBSEC-AUDIT v${TOOL_VERSION}  —  Security Audit Report"
+      echo "$sep"
+      printf "  Target    : %s\n" "$TARGET"
+      printf "  IP        : %s\n" "${TARGET_IP:-N/A}"
+      printf "  Date      : %s\n" "$DATE_HUMAN"
+      printf "  Duration  : %ds\n" "$elapsed"
+      printf "  Auditor   : %s@%s\n" "$(whoami)" "$(hostname)"
+      echo "$sep"
+      echo ""
+      echo "  RISK SUMMARY"
+      echo "  ──────────────────────────────────────────────────"
+      printf "  %-12s %d\n" "CRITICAL"  "$COUNT_CRITICAL"
+      printf "  %-12s %d\n" "HIGH"      "$COUNT_HIGH"
+      printf "  %-12s %d\n" "MEDIUM"    "$COUNT_MEDIUM"
+      printf "  %-12s %d\n" "LOW"       "$COUNT_LOW"
+      printf "  %-12s %d\n" "INFO"      "$COUNT_INFO"
+      printf "  %-12s %d\n" "TOTAL"     "$TOTAL_FINDINGS"
+      echo ""
+      echo "$sep"
+      echo "  FINDINGS"
+      echo "$sep"
+      echo ""
+ 
+      if [[ -s "$FINDINGS_JSONL" ]]; then
+        local n=0
+        while IFS= read -r line; do
+          [[ -z "$line" ]] && continue
+          n=$((n + 1))
+          local sev mod title desc evid rec ts
+          sev=$(_get_field  "$line" "severity"       "INFO")
+          mod=$(_get_field  "$line" "module"          "-")
+          title=$(_get_field "$line" "title"          "Untitled")
+          desc=$(_get_field  "$line" "description"   "")
+          evid=$(_get_field  "$line" "evidence"       "")
+          rec=$(_get_field   "$line" "recommendation" "")
+          ts=$(_get_field    "$line" "timestamp"      "")
+ 
+          printf "  [%03d] [%-8s] [%s] %s\n" "$n" "$sev" "$mod" "$title"
+          [[ -n "$desc" ]] && printf "        Description  : %s\n" "$desc"
+          [[ -n "$evid" ]] && printf "        Evidence     : %s\n" "$evid"
+          [[ -n "$rec"  ]] && printf "        Remediation  : %s\n" "$rec"
+          [[ -n "$ts"   ]] && printf "        Timestamp    : %s\n" "$ts"
+          echo ""
+        done < "$FINDINGS_JSONL"
+      else
+        echo "  No findings recorded."
+      fi
+ 
+      echo ""
+      echo "$sep"
+      echo "  FULL AUDIT LOG"
+      echo "$sep"
+      echo ""
+      cat "$LOG_FILE"
+    } > "$REPORT_TXT"
+    log_ok "TXT report  → $REPORT_TXT"
+  fi
+ 
+  # ────────────────────────────────────────────────────────────────────────────
+  # JSON REPORT
+  # ────────────────────────────────────────────────────────────────────────────
+  if [[ $do_json -eq 1 ]]; then
     {
       printf '{\n'
       printf '  "metadata": {\n'
@@ -2016,413 +2120,283 @@ generate_reports() {
       printf '    "duration_secs": %d\n'    "$elapsed"
       printf '  },\n'
       printf '  "summary": {\n'
-      printf '    "total": %d,\n'           "$TOTAL_FINDINGS"
-      printf '    "critical": %d,\n'        "$COUNT_CRITICAL"
-      printf '    "high": %d,\n'            "$COUNT_HIGH"
-      printf '    "medium": %d,\n'          "$COUNT_MEDIUM"
-      printf '    "low": %d,\n'             "$COUNT_LOW"
-      printf '    "info": %d\n'             "$COUNT_INFO"
+      printf '    "total": %d,\n'      "$TOTAL_FINDINGS"
+      printf '    "critical": %d,\n'   "$COUNT_CRITICAL"
+      printf '    "high": %d,\n'       "$COUNT_HIGH"
+      printf '    "medium": %d,\n'     "$COUNT_MEDIUM"
+      printf '    "low": %d,\n'        "$COUNT_LOW"
+      printf '    "info": %d\n'        "$COUNT_INFO"
       printf '  },\n'
       printf '  "findings": [\n'
-
+ 
       local first=1
-      while IFS= read -r line; do
-        [[ -z "$line" ]] && continue
-        [[ $first -eq 0 ]] && printf ',\n'
-        printf '    %s' "$line"
-        first=0
-      done < "$FINDINGS_JSONL"
-
-      printf '\n  ]\n}\n'
+      if [[ -s "$FINDINGS_JSONL" ]]; then
+        while IFS= read -r line; do
+          [[ -z "$line" ]] && continue
+          [[ $first -eq 0 ]] && printf ',\n'
+          printf '    %s' "$line"
+          first=0
+        done < "$FINDINGS_JSONL"
+        printf '\n'
+      fi
+ 
+      printf '  ]\n'
+      printf '}\n'
     } > "$REPORT_JSON"
     log_ok "JSON report → $REPORT_JSON"
   fi
-
-  # ── TXT REPORT ──────────────────────────────────────────────────────────────
-  if [[ $do_all -eq 1 || "$OPT_OUTPUT_ONLY" == "txt" ]]; then
-    {
-      local sep="════════════════════════════════════════════════════════════════"
-      echo "$sep"
-      echo "  ${TOOL_NAME^^} v${TOOL_VERSION}  —  Security Audit Report"
-      echo "$sep"
-      printf "  Target    : %s\n" "$TARGET"
-      printf "  IP        : %s\n" "${TARGET_IP:-N/A}"
-      printf "  Date      : %s\n" "$DATE_HUMAN"
-      printf "  Duration  : %d seconds\n" "$elapsed"
-      printf "  Auditor   : %s@%s\n" "$(whoami)" "$(hostname)"
-      echo "$sep"
-      echo ""
-      echo "  RISK SUMMARY"
-      echo "  ─────────────────────────────────"
-      printf "  %-10s %d\n" "CRITICAL"  "$COUNT_CRITICAL"
-      printf "  %-10s %d\n" "HIGH"      "$COUNT_HIGH"
-      printf "  %-10s %d\n" "MEDIUM"    "$COUNT_MEDIUM"
-      printf "  %-10s %d\n" "LOW"       "$COUNT_LOW"
-      printf "  %-10s %d\n" "INFO"      "$COUNT_INFO"
-      printf "  %-10s %d\n" "TOTAL"     "$TOTAL_FINDINGS"
-      echo ""
-      echo "$sep"
-      echo "  FINDINGS"
-      echo "$sep"
-      echo ""
-      cat "$LOG_FILE"
-    } > "$REPORT_TXT"
-    log_ok "TXT report  → $REPORT_TXT"
-  fi
-
-  # ── HTML REPORT ─────────────────────────────────────────────────────────────
-  if [[ $do_all -eq 1 || "$OPT_OUTPUT_ONLY" == "html" ]]; then
-    local risk_color="#3fb950"
-    [[ $COUNT_LOW -gt 0 ]]      && risk_color="#58a6ff"
-    [[ $COUNT_MEDIUM -gt 0 ]]   && risk_color="#d29922"
-    [[ $COUNT_HIGH -gt 0 ]]     && risk_color="#f0883e"
-    [[ $COUNT_CRITICAL -gt 0 ]] && risk_color="#f85149"
-
-    local total_non_info=$(( COUNT_CRITICAL + COUNT_HIGH + COUNT_MEDIUM + COUNT_LOW ))
-    local bar_critical=0 bar_high=0 bar_medium=0 bar_low=0
-    if [[ $total_non_info -gt 0 ]]; then
-      bar_critical=$(( COUNT_CRITICAL * 100 / total_non_info ))
-      bar_high=$(( COUNT_HIGH * 100 / total_non_info ))
-      bar_medium=$(( COUNT_MEDIUM * 100 / total_non_info ))
-      bar_low=$(( COUNT_LOW * 100 / total_non_info ))
-    fi
-
-    cat > "$REPORT_HTML" << HTMLSTART
+ 
+  # ────────────────────────────────────────────────────────────────────────────
+  # HTML REPORT
+  # ────────────────────────────────────────────────────────────────────────────
+  if [[ $do_html -eq 1 ]]; then
+ 
+    # Risk colour
+    local risk_label="INFO ONLY" risk_color="#78909c"
+    [[ $COUNT_LOW -gt 0 ]]      && { risk_label="LOW RISK";      risk_color="#42a5f5"; }
+    [[ $COUNT_MEDIUM -gt 0 ]]   && { risk_label="MEDIUM RISK";   risk_color="#ffb300"; }
+    [[ $COUNT_HIGH -gt 0 ]]     && { risk_label="HIGH RISK";     risk_color="#f0883e"; }
+    [[ $COUNT_CRITICAL -gt 0 ]] && { risk_label="CRITICAL RISK"; risk_color="#f44336"; }
+ 
+    # Risk bar percentages
+    local total_bar=$(( COUNT_CRITICAL + COUNT_HIGH + COUNT_MEDIUM + COUNT_LOW ))
+    [[ $total_bar -eq 0 ]] && total_bar=1
+    local bc=$(( COUNT_CRITICAL * 100 / total_bar ))
+    local bh=$(( COUNT_HIGH     * 100 / total_bar ))
+    local bm=$(( COUNT_MEDIUM   * 100 / total_bar ))
+    local bl=$(( COUNT_LOW      * 100 / total_bar ))
+ 
+    # Write HTML header
+    cat > "$REPORT_HTML" << HTMLHEAD
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${TOOL_NAME} — ${TARGET_DOMAIN} — Security Audit Report</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>websec-audit — ${TARGET_DOMAIN}</title>
 <style>
-:root {
-  --bg:     #0d1117;
-  --bg2:    #161b22;
-  --bg3:    #21262d;
-  --border: #30363d;
-  --text:   #c9d1d9;
-  --muted:  #8b949e;
-  --green:  #3fb950;
-  --blue:   #58a6ff;
-  --yellow: #d29922;
-  --orange: #f0883e;
-  --red:    #f85149;
-  --purple: #bc8cff;
-  --c-critical: #f85149;
-  --c-high:     #f0883e;
-  --c-medium:   #d29922;
-  --c-low:      #58a6ff;
-  --c-info:     #8b949e;
-  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --mono: 'Consolas', 'Monaco', 'Courier New', monospace;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); line-height: 1.6; font-size: 14px; }
-a { color: var(--blue); text-decoration: none; }
-a:hover { text-decoration: underline; }
-
-/* ── Header ── */
-header {
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  padding: 20px 40px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.header-left h1 { font-size: 22px; color: var(--blue); font-weight: 600; }
-.header-left .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; }
-.risk-badge {
-  padding: 8px 20px; border-radius: 6px; font-size: 13px;
-  font-weight: 700; letter-spacing: 1px;
-  background: ${risk_color}22; color: ${risk_color};
-  border: 1px solid ${risk_color};
-}
-
-/* ── Layout ── */
-main { max-width: 1280px; margin: 0 auto; padding: 32px 40px; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
-.grid-5 { display: grid; grid-template-columns: repeat(5,1fr); gap: 16px; margin-bottom: 28px; }
-
-/* ── Cards ── */
-.card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 20px;
-}
-
-/* ── Severity count cards ── */
-.sev-card { text-align: center; border-radius: 8px; padding: 20px; background: var(--bg2); border: 1px solid var(--border); }
-.sev-card .count { font-size: 42px; font-weight: 700; line-height: 1; }
-.sev-card .label { font-size: 11px; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; }
-.sev-card.c { border-color: var(--c-critical); } .sev-card.c .count { color: var(--c-critical); }
-.sev-card.h { border-color: var(--c-high); }     .sev-card.h .count { color: var(--c-high); }
-.sev-card.m { border-color: var(--c-medium); }   .sev-card.m .count { color: var(--c-medium); }
-.sev-card.l { border-color: var(--c-low); }      .sev-card.l .count { color: var(--c-low); }
-.sev-card.i .count { color: var(--c-info); }
-
-/* ── Risk bar ── */
-.risk-bar { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; display: flex; margin: 16px 0; }
-.rb-c { background: var(--c-critical); }
-.rb-h { background: var(--c-high); }
-.rb-m { background: var(--c-medium); }
-.rb-l { background: var(--c-low); }
-
-/* ── Section heading ── */
-h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px;
-     padding-left: 12px; border-left: 3px solid var(--blue); color: var(--text); }
-
-/* ── Filter bar ── */
-.filter-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
-.filter-btn {
-  padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
-  border: 1px solid var(--border); background: var(--bg2); color: var(--muted);
-  transition: all .15s;
-}
-.filter-btn:hover { border-color: var(--blue); color: var(--blue); }
-.filter-btn.active { border-color: var(--blue); color: var(--blue); background: #58a6ff11; }
-.search-box {
-  margin-left: auto; padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
-  background: var(--bg3); color: var(--text); font-size: 12px; width: 220px;
-}
-.search-box:focus { outline: none; border-color: var(--blue); }
-
-/* ── Findings table ── */
-.findings-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.findings-table th {
-  background: var(--bg3); color: var(--muted); text-align: left;
-  padding: 10px 14px; font-weight: 500; border-bottom: 1px solid var(--border);
-  white-space: nowrap; position: sticky; top: 0; z-index: 10;
-}
-.findings-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
-.findings-table tr:hover td { background: rgba(255,255,255,.02); }
-.findings-table tr[hidden] { display: none; }
-
-/* ── Badges ── */
-.badge {
-  display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px;
-  font-weight: 700; letter-spacing: .5px; white-space: nowrap;
-}
-.badge-CRITICAL { background: #f8514918; color: var(--c-critical); border: 1px solid var(--c-critical); }
-.badge-HIGH     { background: #f0883e18; color: var(--c-high);     border: 1px solid var(--c-high); }
-.badge-MEDIUM   { background: #d2992218; color: var(--c-medium);   border: 1px solid var(--c-medium); }
-.badge-LOW      { background: #58a6ff18; color: var(--c-low);      border: 1px solid var(--c-low); }
-.badge-INFO     { background: #8b949e18; color: var(--c-info);     border: 1px solid var(--c-info); }
-
-.module-tag {
-  display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 10px;
-  background: var(--bg3); color: var(--muted); border: 1px solid var(--border);
-  font-family: var(--mono);
-}
-
-/* ── Evidence / recommendation ── */
-.evidence {
-  font-family: var(--mono); font-size: 11px; color: var(--muted);
-  background: var(--bg3); padding: 4px 8px; border-radius: 4px;
-  margin-top: 5px; word-break: break-all; border-left: 2px solid var(--border);
-}
-.rec { font-size: 12px; color: var(--green); margin-top: 5px; }
-.rec::before { content: "💡 "; }
-
-/* ── Metadata card ── */
-.meta-grid { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; font-size: 13px; }
-.meta-key { color: var(--muted); }
-.meta-val { color: var(--text); font-family: var(--mono); font-size: 12px; }
-
-/* ── Footer ── */
-footer { text-align: center; color: var(--muted); font-size: 12px; padding: 24px 40px;
-         border-top: 1px solid var(--border); margin-top: 40px; }
-
-/* ── Empty state ── */
-.empty { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--br:#30363d;
+  --tx:#c9d1d9;--mu:#8b949e;--gn:#3fb950;--bl:#58a6ff;
+  --yw:#d29922;--or:#f0883e;--rd:#f85149;
+  --cc:#f44336;--ch:#f0883e;--cm:#d29922;--cl:#42a5f5;--ci:#78909c;
+  --fn:'Segoe UI',system-ui,sans-serif;--fc:'Consolas','Courier New',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fn);background:var(--bg);color:var(--tx);font-size:14px;line-height:1.6}
+a{color:var(--bl);text-decoration:none}
+header{background:var(--bg2);border-bottom:1px solid var(--br);
+  padding:18px 32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+header h1{font-size:20px;color:var(--bl);font-weight:600}
+header .sub{color:var(--mu);font-size:12px;margin-top:3px}
+.risk{padding:6px 16px;border-radius:5px;font-size:12px;font-weight:700;letter-spacing:.6px;
+  background:${risk_color}22;color:${risk_color};border:1px solid ${risk_color}}
+main{max-width:1200px;margin:0 auto;padding:28px 32px}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.card{background:var(--bg2);border:1px solid var(--br);border-radius:8px;padding:16px;text-align:center}
+.card .n{font-size:36px;font-weight:700;line-height:1}
+.card .l{font-size:11px;color:var(--mu);margin-top:5px;text-transform:uppercase;letter-spacing:1px}
+.card.cc{border-color:var(--cc)}.card.cc .n{color:var(--cc)}
+.card.ch{border-color:var(--ch)}.card.ch .n{color:var(--ch)}
+.card.cm{border-color:var(--cm)}.card.cm .n{color:var(--cm)}
+.card.cl{border-color:var(--cl)}.card.cl .n{color:var(--cl)}
+.card.ci .n{color:var(--ci)}
+.rbar{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex;margin-bottom:24px}
+.rc{background:var(--cc)}.rh{background:var(--ch)}.rm{background:var(--cm)}.rl{background:var(--cl)}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+.meta-box{background:var(--bg2);border:1px solid var(--br);border-radius:8px;padding:14px 16px}
+.meta-box h2{font-size:13px;color:var(--mu);margin-bottom:10px;font-weight:500;text-transform:uppercase;letter-spacing:.6px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:12px}
+.kv .k{color:var(--mu)}.kv .v{font-family:var(--fc);color:var(--tx);word-break:break-all}
+h2.sh{font-size:15px;font-weight:600;margin-bottom:12px;padding-left:10px;border-left:3px solid var(--bl)}
+.filter-bar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;align-items:center}
+.fb{padding:4px 12px;border-radius:5px;cursor:pointer;font-size:12px;border:1px solid var(--br);
+  background:var(--bg2);color:var(--mu);transition:all .15s}
+.fb:hover,.fb.active{border-color:var(--bl);color:var(--bl);background:#58a6ff11}
+.sb{margin-left:auto;padding:5px 11px;border-radius:5px;border:1px solid var(--br);
+  background:var(--bg3);color:var(--tx);font-size:12px;width:200px}
+.sb:focus{outline:none;border-color:var(--bl)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--bg3);color:var(--mu);text-align:left;padding:9px 12px;
+  font-weight:500;border-bottom:1px solid var(--br);white-space:nowrap;
+  position:sticky;top:0;z-index:5}
+td{padding:9px 12px;border-bottom:1px solid var(--br);vertical-align:top}
+tr:hover td{background:#ffffff08}
+tr[hidden]{display:none}
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;
+  letter-spacing:.4px;white-space:nowrap}
+.bcc{background:#f4433618;color:var(--cc);border:1px solid var(--cc)}
+.bch{background:#f0883e18;color:var(--ch);border:1px solid var(--ch)}
+.bcm{background:#d2992218;color:var(--cm);border:1px solid var(--cm)}
+.bcl{background:#42a5f518;color:var(--cl);border:1px solid var(--cl)}
+.bci{background:#78909c18;color:var(--ci);border:1px solid var(--ci)}
+.mtag{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;
+  background:var(--bg3);color:var(--mu);border:1px solid var(--br);font-family:var(--fc)}
+.ev{font-family:var(--fc);font-size:11px;color:var(--mu);background:var(--bg3);
+  padding:3px 7px;border-radius:3px;margin-top:4px;word-break:break-all;border-left:2px solid var(--br)}
+.fix{font-size:11px;color:var(--gn);margin-top:4px}
+.fix::before{content:"💡 "}
+#empty{text-align:center;padding:40px;color:var(--mu);display:none}
+footer{text-align:center;color:var(--mu);font-size:11px;padding:20px;
+  border-top:1px solid var(--br);margin-top:32px}
+@media(max-width:700px){.cards{grid-template-columns:repeat(3,1fr)}.meta-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-
 <header>
-  <div class="header-left">
-    <h1>🔐 ${TOOL_NAME} — Security Audit Report</h1>
-    <div class="subtitle">${TARGET} &nbsp;|&nbsp; ${DATE_HUMAN} &nbsp;|&nbsp; ${TOOL_NAME} v${TOOL_VERSION} by ${TOOL_AUTHOR}</div>
+  <div>
+    <h1>🔐 websec-audit — Security Report</h1>
+    <div class="sub">${TARGET} &nbsp;|&nbsp; ${DATE_HUMAN} &nbsp;|&nbsp; v${TOOL_VERSION} by ${TOOL_AUTHOR}</div>
   </div>
-  <div class="risk-badge">
-    $( [[ $COUNT_CRITICAL -gt 0 ]] && echo "CRITICAL RISK" || \
-       [[ $COUNT_HIGH -gt 0 ]] && echo "HIGH RISK" || \
-       [[ $COUNT_MEDIUM -gt 0 ]] && echo "MEDIUM RISK" || \
-       [[ $COUNT_LOW -gt 0 ]] && echo "LOW RISK" || echo "INFO ONLY" )
-  </div>
+  <div class="risk">${risk_label}</div>
 </header>
-
 <main>
-
-  <!-- Summary cards -->
-  <div class="grid-5">
-    <div class="sev-card c"><div class="count">${COUNT_CRITICAL}</div><div class="label">Critical</div></div>
-    <div class="sev-card h"><div class="count">${COUNT_HIGH}</div><div class="label">High</div></div>
-    <div class="sev-card m"><div class="count">${COUNT_MEDIUM}</div><div class="label">Medium</div></div>
-    <div class="sev-card l"><div class="count">${COUNT_LOW}</div><div class="label">Low</div></div>
-    <div class="sev-card i"><div class="count">${COUNT_INFO}</div><div class="label">Info</div></div>
-  </div>
-
-  <!-- Risk bar -->
-  <div class="risk-bar">
-    <div class="rb-c" style="width:${bar_critical}%"></div>
-    <div class="rb-h" style="width:${bar_high}%"></div>
-    <div class="rb-m" style="width:${bar_medium}%"></div>
-    <div class="rb-l" style="width:${bar_low}%"></div>
-  </div>
-
-  <!-- Meta + scan info -->
-  <div class="grid-2" style="margin-bottom:32px">
-    <div class="card">
-      <h2>Scan Metadata</h2>
-      <div class="meta-grid">
-        <span class="meta-key">Target</span>    <span class="meta-val">${TARGET}</span>
-        <span class="meta-key">Domain</span>    <span class="meta-val">${TARGET_DOMAIN}</span>
-        <span class="meta-key">IP</span>        <span class="meta-val">${TARGET_IP:-N/A}</span>
-        <span class="meta-key">Date</span>      <span class="meta-val">${DATE_HUMAN}</span>
-        <span class="meta-key">Duration</span>  <span class="meta-val">${elapsed}s</span>
-        <span class="meta-key">Auditor</span>   <span class="meta-val">$(whoami)@$(hostname)</span>
-        <span class="meta-key">Mode</span>      <span class="meta-val">$(
-          [[ $OPT_AGGRESSIVE -eq 1 ]] && echo AGGRESSIVE || \
-          [[ $OPT_STEALTH -eq 1 ]] && echo STEALTH || echo NORMAL)</span>
-        <span class="meta-key">Tool</span>      <span class="meta-val">${TOOL_NAME} v${TOOL_VERSION}</span>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Modules Executed</h2>
-      <div class="meta-grid">
-        <span class="meta-key">Recon</span>          <span class="meta-val">$( [[ $MOD_RECON -eq 1 ]] && echo "✔ enabled" || echo "— skipped")</span>
-        <span class="meta-key">Port Scan</span>      <span class="meta-val">$( [[ $MOD_PORTSCAN -eq 1 ]] && echo "✔ enabled" || echo "— skipped")</span>
-        <span class="meta-key">Fingerprint</span>    <span class="meta-val">$( [[ $MOD_FINGERPRINT -eq 1 ]] && echo "✔ enabled" || echo "— skipped")</span>
-        <span class="meta-key">SSL/TLS</span>        <span class="meta-val">$( [[ $MOD_SSL -eq 1 ]] && echo "✔ enabled" || echo "— skipped")</span>
-        <span class="meta-key">Headers</span>        <span class="meta-val">$( [[ $MOD_HEADERS -eq 1 ]] && echo "✔ enabled" || echo "— skipped")</span>
-        <span class="meta-key">Dir Brute</span>      <span class="meta-val">$( [[ $MOD_DIRBRUTE -eq 1 ]] && echo "✔ enabled" || echo "— skipped")</span>
-        <span class="meta-key">SQLi / XSS</span>    <span class="meta-val">$( [[ $MOD_SQLI -eq 1 ]] && echo "✔" || echo "—") / $( [[ $MOD_XSS -eq 1 ]] && echo "✔" || echo "—")</span>
-        <span class="meta-key">CMS / Nuclei</span>  <span class="meta-val">$( [[ $MOD_CMS -eq 1 ]] && echo "✔" || echo "—") / $( [[ $MOD_NUCLEI -eq 1 ]] && echo "✔" || echo "—")</span>
-      </div>
+ 
+<div class="cards">
+  <div class="card cc"><div class="n">${COUNT_CRITICAL}</div><div class="l">Critical</div></div>
+  <div class="card ch"><div class="n">${COUNT_HIGH}</div><div class="l">High</div></div>
+  <div class="card cm"><div class="n">${COUNT_MEDIUM}</div><div class="l">Medium</div></div>
+  <div class="card cl"><div class="n">${COUNT_LOW}</div><div class="l">Low</div></div>
+  <div class="card ci"><div class="n">${COUNT_INFO}</div><div class="l">Info</div></div>
+</div>
+ 
+<div class="rbar">
+  <div class="rc" style="width:${bc}%"></div>
+  <div class="rh" style="width:${bh}%"></div>
+  <div class="rm" style="width:${bm}%"></div>
+  <div class="rl" style="width:${bl}%"></div>
+</div>
+ 
+<div class="meta-grid">
+  <div class="meta-box">
+    <h2>Scan Metadata</h2>
+    <div class="kv">
+      <span class="k">Target</span>   <span class="v">${TARGET}</span>
+      <span class="k">Domain</span>   <span class="v">${TARGET_DOMAIN}</span>
+      <span class="k">IP</span>       <span class="v">${TARGET_IP:-N/A}</span>
+      <span class="k">Date</span>     <span class="v">${DATE_HUMAN}</span>
+      <span class="k">Duration</span> <span class="v">${elapsed}s</span>
+      <span class="k">Auditor</span>  <span class="v">$(whoami)@$(hostname)</span>
+      <span class="k">Mode</span>     <span class="v">$( [[ ${OPT_AGGRESSIVE:-0} -eq 1 ]] && echo AGGRESSIVE || [[ ${OPT_STEALTH:-0} -eq 1 ]] && echo STEALTH || echo NORMAL)</span>
     </div>
   </div>
-
-  <!-- Findings -->
-  <h2>Security Findings (${TOTAL_FINDINGS})</h2>
-  <div class="filter-bar">
-    <button class="filter-btn active" onclick="applyFilter('ALL',this)">All (${TOTAL_FINDINGS})</button>
-    <button class="filter-btn" onclick="applyFilter('CRITICAL',this)">⬤ Critical (${COUNT_CRITICAL})</button>
-    <button class="filter-btn" onclick="applyFilter('HIGH',this)">⬤ High (${COUNT_HIGH})</button>
-    <button class="filter-btn" onclick="applyFilter('MEDIUM',this)">⬤ Medium (${COUNT_MEDIUM})</button>
-    <button class="filter-btn" onclick="applyFilter('LOW',this)">⬤ Low (${COUNT_LOW})</button>
-    <button class="filter-btn" onclick="applyFilter('INFO',this)">Info (${COUNT_INFO})</button>
-    <input class="search-box" type="text" placeholder="Search findings…" oninput="applySearch(this.value)">
+  <div class="meta-box">
+    <h2>Module Status</h2>
+    <div class="kv">
+      <span class="k">Recon</span>       <span class="v">$( [[ ${MOD_RECON:-1} -eq 1 ]]        && echo "✔ enabled" || echo "— skipped")</span>
+      <span class="k">Port Scan</span>   <span class="v">$( [[ ${MOD_PORTSCAN:-1} -eq 1 ]]     && echo "✔ enabled" || echo "— skipped")</span>
+      <span class="k">SSL/TLS</span>     <span class="v">$( [[ ${MOD_SSL:-1} -eq 1 ]]          && echo "✔ enabled" || echo "— skipped")</span>
+      <span class="k">Headers</span>     <span class="v">$( [[ ${MOD_HEADERS:-1} -eq 1 ]]      && echo "✔ enabled" || echo "— skipped")</span>
+      <span class="k">Dir Brute</span>   <span class="v">$( [[ ${MOD_DIRBRUTE:-1} -eq 1 ]]     && echo "✔ enabled" || echo "— skipped")</span>
+      <span class="k">SQLi / XSS</span> <span class="v">$( [[ ${MOD_SQLI:-1} -eq 1 ]]  && echo "✔" || echo "—") / $( [[ ${MOD_XSS:-1} -eq 1 ]] && echo "✔" || echo "—")</span>
+      <span class="k">CMS</span>         <span class="v">$( [[ ${MOD_CMS:-1} -eq 1 ]]          && echo "✔ enabled" || echo "— skipped")</span>
+      <span class="k">Nuclei</span>      <span class="v">$( [[ ${MOD_NUCLEI:-1} -eq 1 ]]       && echo "✔ enabled" || echo "— skipped")</span>
+    </div>
   </div>
-
-  <div id="no-results" class="empty" style="display:none">No findings match the current filter.</div>
-
-  <table class="findings-table" id="findings-table">
-    <thead>
-      <tr>
-        <th style="width:40px">#</th>
-        <th style="width:100px">Severity</th>
-        <th style="width:110px">Module</th>
-        <th>Finding</th>
-        <th style="width:140px;white-space:nowrap">Timestamp</th>
-      </tr>
-    </thead>
-    <tbody id="findings-body">
-HTMLSTART
-
-    # Generate table rows from JSONL
+</div>
+ 
+<h2 class="sh">Security Findings (${TOTAL_FINDINGS})</h2>
+<div class="filter-bar">
+  <button class="fb active" onclick="filt('ALL',this)">All (${TOTAL_FINDINGS})</button>
+  <button class="fb" onclick="filt('CRITICAL',this)" style="color:var(--cc)">Critical (${COUNT_CRITICAL})</button>
+  <button class="fb" onclick="filt('HIGH',this)"     style="color:var(--ch)">High (${COUNT_HIGH})</button>
+  <button class="fb" onclick="filt('MEDIUM',this)"   style="color:var(--cm)">Medium (${COUNT_MEDIUM})</button>
+  <button class="fb" onclick="filt('LOW',this)"      style="color:var(--cl)">Low (${COUNT_LOW})</button>
+  <button class="fb" onclick="filt('INFO',this)">Info (${COUNT_INFO})</button>
+  <input class="sb" type="text" placeholder="Search…" oninput="srch(this.value)">
+</div>
+ 
+<div id="empty">No findings match the current filter.</div>
+<table><thead><tr>
+  <th style="width:36px">#</th>
+  <th style="width:90px">Severity</th>
+  <th style="width:100px">Module</th>
+  <th>Finding</th>
+  <th style="width:130px">Timestamp</th>
+</tr></thead><tbody id="tbody">
+HTMLHEAD
+ 
+    # Write table rows
     local row=0
-    while IFS= read -r entry; do
-      [[ -z "$entry" ]] && continue
-      row=$((row + 1))
-
-      local sev mod title desc evid rec ts
-      if has_tool jq; then
-        sev=$(echo "$entry"  | jq -r '.severity // "INFO"'        2>/dev/null)
-        mod=$(echo "$entry"  | jq -r '.module // ""'              2>/dev/null)
-        title=$(echo "$entry"| jq -r '.title // ""'               2>/dev/null)
-        desc=$(echo "$entry" | jq -r '.description // ""'         2>/dev/null)
-        evid=$(echo "$entry" | jq -r '.evidence // ""'            2>/dev/null)
-        rec=$(echo "$entry"  | jq -r '.recommendation // ""'      2>/dev/null)
-        ts=$(echo "$entry"   | jq -r '.timestamp // ""'           2>/dev/null)
-      else
-        sev=$(echo "$entry"  | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('severity','INFO'))"       2>/dev/null || echo "INFO")
-        mod=$(echo "$entry"  | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('module',''))"             2>/dev/null || echo "")
-        title=$(echo "$entry"| python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('title',''))"              2>/dev/null || echo "")
-        desc=$(echo "$entry" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('description',''))"       2>/dev/null || echo "")
-        evid=$(echo "$entry" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('evidence',''))"          2>/dev/null || echo "")
-        rec=$(echo "$entry"  | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('recommendation',''))"    2>/dev/null || echo "")
-        ts=$(echo "$entry"   | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('timestamp',''))"         2>/dev/null || echo "")
-      fi
-
-      # HTML-escape special chars
-      title=$(echo "$title" | sed 's/</\&lt;/g; s/>/\&gt;/g')
-      desc=$(echo "$desc"   | sed 's/</\&lt;/g; s/>/\&gt;/g')
-      evid=$(echo "$evid"   | sed 's/</\&lt;/g; s/>/\&gt;/g')
-      rec=$(echo "$rec"     | sed 's/</\&lt;/g; s/>/\&gt;/g')
-
-      printf '<tr data-sev="%s" data-text="%s">\n' \
-        "$sev" "$(echo "$sev $mod $title $desc" | tr '[:upper:]' '[:lower:]')" >> "$REPORT_HTML"
-      printf '  <td>%d</td>\n'  "$row"                      >> "$REPORT_HTML"
-      printf '  <td><span class="badge badge-%s">%s</span></td>\n' "$sev" "$sev" >> "$REPORT_HTML"
-      printf '  <td><span class="module-tag">%s</span></td>\n' "$mod"            >> "$REPORT_HTML"
-      {
-        printf '  <td>\n'
-        printf '    <strong>%s</strong>\n' "$title"
-        [[ -n "$desc" ]] && printf '    <br><small style="color:var(--muted)">%s</small>\n' "$desc"
-        [[ -n "$evid" ]] && printf '    <div class="evidence">%s</div>\n' "$evid"
-        [[ -n "$rec" ]]  && printf '    <div class="rec">%s</div>\n' "$rec"
-        printf '  </td>\n'
-        printf '  <td style="white-space:nowrap;color:var(--muted);font-family:var(--mono);font-size:11px">%s</td>\n' "$ts"
-        printf '</tr>\n'
-      } >> "$REPORT_HTML"
-
-    done < "$FINDINGS_JSONL"
-
-    cat >> "$REPORT_HTML" << HTMLEND
-    </tbody>
-  </table>
-
+    if [[ -s "$FINDINGS_JSONL" ]]; then
+      while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        row=$((row + 1))
+ 
+        local sev mod title desc evid rec ts
+        sev=$(_get_field   "$line" "severity"       "INFO")
+        mod=$(_get_field   "$line" "module"         "-")
+        title=$(_get_field  "$line" "title"         "Untitled")
+        desc=$(_get_field   "$line" "description"   "")
+        evid=$(_get_field   "$line" "evidence"      "")
+        rec=$(_get_field    "$line" "recommendation" "")
+        ts=$(_get_field     "$line" "timestamp"      "")
+ 
+        # Escape for HTML
+        local htitle hmod hdesc hevid hrec
+        htitle=$(_hesc "$title")
+        hmod=$(_hesc "$mod")
+        hdesc=$(_hesc "$desc")
+        hevid=$(_hesc "$evid")
+        hrec=$(_hesc "$rec")
+ 
+        # Badge class
+        local bcls="bci"
+        case "$sev" in
+          CRITICAL) bcls="bcc" ;; HIGH) bcls="bch" ;;
+          MEDIUM)   bcls="bcm" ;; LOW)  bcls="bcl" ;;
+        esac
+ 
+        local srchdata
+        srchdata=$(printf '%s %s %s %s' "$sev" "$mod" "$title" "$desc" | tr '[:upper:]' '[:lower:]')
+ 
+        {
+          printf '<tr data-sev="%s" data-q="%s">\n' "$sev" "$srchdata"
+          printf '<td>%d</td>\n' "$row"
+          printf '<td><span class="badge %s">%s</span></td>\n' "$bcls" "$sev"
+          printf '<td><span class="mtag">%s</span></td>\n' "$hmod"
+          printf '<td><strong>%s</strong>' "$htitle"
+          [[ -n "$hdesc" ]] && printf '<br><small style="color:var(--mu)">%s</small>' "$hdesc"
+          [[ -n "$hevid" ]] && printf '<div class="ev">%s</div>' "$hevid"
+          [[ -n "$hrec"  ]] && printf '<div class="fix">%s</div>' "$hrec"
+          printf '</td>\n'
+          printf '<td style="font-family:var(--fc);font-size:11px;color:var(--mu);white-space:nowrap">%s</td>\n' "$ts"
+          printf '</tr>\n'
+        } >> "$REPORT_HTML"
+ 
+      done < "$FINDINGS_JSONL"
+    fi
+ 
+    # Write HTML footer
+    cat >> "$REPORT_HTML" << HTMLFOOT
+</tbody></table>
 </main>
-
-<footer>
-  Generated by <strong>${TOOL_NAME}</strong> v${TOOL_VERSION} &mdash;
-  <a href="${TOOL_URL}">${TOOL_URL}</a> &mdash;
-  For authorized security assessments only
-</footer>
-
+<footer>Generated by <strong>websec-audit</strong> v${TOOL_VERSION} — <a href="${TOOL_URL}">${TOOL_URL}</a> — Authorised use only</footer>
 <script>
-let currentFilter = 'ALL';
-let currentSearch = '';
-
-function applyFilter(sev, btn) {
-  currentFilter = sev;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  updateTable();
+var cur='ALL',srchTerm='';
+function filt(s,btn){
+  cur=s;
+  document.querySelectorAll('.fb').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+  update();
 }
-
-function applySearch(q) {
-  currentSearch = q.toLowerCase();
-  updateTable();
-}
-
-function updateTable() {
-  let visible = 0;
-  document.querySelectorAll('#findings-body tr').forEach(row => {
-    const sevMatch  = currentFilter === 'ALL' || row.dataset.sev === currentFilter;
-    const textMatch = !currentSearch || (row.dataset.text || '').includes(currentSearch);
-    const show = sevMatch && textMatch;
-    row.hidden = !show;
-    if (show) visible++;
+function srch(v){srchTerm=v.toLowerCase();update();}
+function update(){
+  var rows=document.querySelectorAll('#tbody tr'),vis=0;
+  rows.forEach(function(r){
+    var sm=cur==='ALL'||r.dataset.sev===cur;
+    var qm=!srchTerm||(r.dataset.q||'').includes(srchTerm);
+    r.hidden=!(sm&&qm);
+    if(sm&&qm)vis++;
   });
-  document.getElementById('no-results').style.display = visible === 0 ? '' : 'none';
+  document.getElementById('empty').style.display=vis===0?'':'none';
 }
 </script>
-</body>
-</html>
-HTMLEND
-
+</body></html>
+HTMLFOOT
+ 
     log_ok "HTML report → $REPORT_HTML"
   fi
 }
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  FINAL SUMMARY

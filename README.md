@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔐 websec-audit
+# WebSec-Audit
 
 **Professional Web Security Audit Framework**
 
@@ -14,6 +14,11 @@ A modular, extensible Bash framework for **comprehensive web application securit
 Automates 15+ attack surface modules, generates structured logs, and produces professional reports in HTML, JSON and TXT.
 
 [Features](#-features) · [Installation](#-installation) · [Usage](#-usage) · [Modules](#-modules) · [Output](#-output-structure) · [Contributing](#-contributing)
+
+---
+![WebSec-Audit Start](https://raw.githubusercontent.com/davidalvarezp/websec-audit/main/docs/demo_start.png)
+
+![WebSec-Audit End](https://raw.githubusercontent.com/davidalvarezp/websec-audit/main/docs/demo_end.png)
 
 </div>
 
