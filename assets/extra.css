@@ -1,0 +1,130 @@
+/* ── Brand colours ─────────────────────────────────────────── */
+:root {
+  --ws-blue:        #1e88e5;
+  --ws-blue-light:  #42a5f5;
+  --ws-blue-dark:   #1565c0;
+  --ws-critical:    #f44336;
+  --ws-high:        #ff7043;
+  --ws-medium:      #ffb300;
+  --ws-low:         #42a5f5;
+  --ws-info:        #78909c;
+}
+
+/* ── Hero banner on homepage ───────────────────────────────── */
+.ws-hero {
+  background: linear-gradient(135deg, #0d1b2a 0%, #1a2a3a 60%, #0d2137 100%);
+  border: 1px solid #1e88e540;
+  border-radius: 12px;
+  padding: 2.5rem 2rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.ws-hero h1 {
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #e3f2fd !important;
+  margin: 0 0 0.5rem;
+}
+.ws-hero .ws-tagline {
+  font-size: 1.1rem;
+  color: #90caf9;
+  margin: 0;
+}
+
+/* ── Severity badges ───────────────────────────────────────── */
+.sev {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+}
+.sev-critical { background: #f4433620; color: #f44336; border: 1px solid #f44336; }
+.sev-high     { background: #ff704320; color: #ff7043; border: 1px solid #ff7043; }
+.sev-medium   { background: #ffb30020; color: #ffb300; border: 1px solid #ffb300; }
+.sev-low      { background: #42a5f520; color: #42a5f5; border: 1px solid #42a5f5; }
+.sev-info     { background: #78909c20; color: #90a4ae; border: 1px solid #78909c; }
+
+/* ── Module card grid ──────────────────────────────────────── */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  margin: 1.5rem 0;
+}
+.module-card {
+  background: var(--md-code-bg-color);
+  border: 1px solid #1e88e530;
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  transition: border-color .2s, transform .15s;
+  text-decoration: none !important;
+  display: block;
+}
+.module-card:hover {
+  border-color: var(--ws-blue);
+  transform: translateY(-2px);
+}
+.module-card .mc-num {
+  font-size: 0.7rem;
+  color: var(--ws-blue-light);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.module-card .mc-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--md-typeset-color);
+  margin: 4px 0 3px;
+}
+.module-card .mc-desc {
+  font-size: 0.78rem;
+  color: var(--md-default-fg-color--light);
+  margin: 0;
+}
+
+/* ── Code block enhancements ───────────────────────────────── */
+.md-typeset pre > code {
+  font-size: 0.82rem;
+}
+
+/* ── Command pill ──────────────────────────────────────────── */
+.cmd {
+  display: inline-block;
+  background: var(--md-code-bg-color);
+  border: 1px solid #1e88e540;
+  border-radius: 5px;
+  padding: 1px 7px;
+  font-family: var(--md-code-font);
+  font-size: 0.83rem;
+  color: #90caf9;
+}
+
+/* ── Flag table ────────────────────────────────────────────── */
+.flag-table td:first-child {
+  font-family: var(--md-code-font);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  color: #90caf9;
+}
+
+/* ── Admonition tweaks ─────────────────────────────────────── */
+.md-typeset .admonition.legal {
+  border-color: #f44336;
+}
+.md-typeset .admonition.legal > .admonition-title {
+  background-color: #f4433615;
+}
+.md-typeset .admonition.legal > .admonition-title::before {
+  background-color: #f44336;
+  -webkit-mask-image: var(--md-admonition-icon--warning);
+          mask-image: var(--md-admonition-icon--warning);
+}
+
+/* ── Footer ────────────────────────────────────────────────── */
+.md-footer-meta {
+  background-color: #0a1520;
+}
