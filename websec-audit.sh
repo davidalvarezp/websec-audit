@@ -116,9 +116,9 @@ print_banner() {
   ╚╩╝└─┘└─┘╚═╝└─┘└─┘  ╩ ╩└─┘─┴┘┴ ┴
 BANNER
   echo -e "${C_RESET}"
-  printf "  %s Professional Web Security Audit Framework\n" "${C_BOLD}"
-  printf "  Version %-8s  Author: %s%s\n" "${TOOL_VERSION}" "${TOOL_AUTHOR}" "${C_RESET}"
-  printf "  %s%s%s\n\n" "${C_DIM}" "${TOOL_URL}" "${C_RESET}"
+  printf "  Professional Web Security Audit Framework\n"
+  printf "  Author: davidalvarezp      Version: 1.0.1\n"
+  printf "  GH: github.com/davidalvarezp/websec-audit\n"
   echo -e "  ${C_DIM}─────────────────────────────────────────────────${C_RESET}"
   echo ""
 }
@@ -1249,7 +1249,7 @@ module_dirbrute() {
       if [[ -f "$WL_DNS" ]]; then
         log_subsection "gobuster (DNS)"
         gobuster dns \
-          -d "$TARGET_DOMAIN" \
+          --do "$TARGET_DOMAIN" \
           -w "$WL_DNS" \
           -t "$OPT_THREADS" \
           -q \
@@ -2496,12 +2496,12 @@ main() {
 
   # Legal notice
   echo -e "${C_RED}${C_BOLD}"
-  printf "  ╔══════════════════════════════════════════════════════╗\n"
-  printf "  ║  ⚠  LEGAL NOTICE                                    ║\n"
-  printf "  ║  This tool may only be used against systems you     ║\n"
-  printf "  ║  own or have explicit written authorisation to      ║\n"
-  printf "  ║  test. Unauthorised use is illegal.                 ║\n"
-  printf "  ╚══════════════════════════════════════════════════════╝\n"
+  printf "  ╔═══════════════════════════════════════════════════╗\n"
+  printf "  ║  ⚠  LEGAL NOTICE                                 ║\n"
+  printf "  ║  This tool may only be used against systems you  ║\n"
+  printf "  ║  own or have explicit written authorisation to   ║\n"
+  printf "  ║  test. Unauthorised use is illegal.              ║\n"
+  printf "  ╚═══════════════════════════════════════════════════╝\n"
   echo -e "${C_RESET}"
   read -r -t 5 -p "  Press ENTER to continue (auto-continues in 5s)..." 2>/dev/null || true
   echo ""
