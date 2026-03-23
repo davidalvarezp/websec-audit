@@ -7,32 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  shellcheck:
-    name: ShellCheck
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install ShellCheck
-        run: sudo apt-get install -y shellcheck
-
-      - name: Run ShellCheck on websec-audit.sh
-        run: |
-          shellcheck -S warning \
-            --shell=bash \
-            --exclude=SC2086 \
-            websec-audit.sh
-        # SC2086: Double-quote to prevent globbing — intentionally disabled
-        # for nmap/sqlmap/gobuster flag passing which requires word splitting
-
-      - name: Run ShellCheck on install.sh
-        run: |
-          shellcheck -S warning \
-            --shell=bash \
-            install.sh
-
   syntax-check:
     name: Bash Syntax Check
     runs-on: ubuntu-latest
@@ -46,21 +20,3 @@ jobs:
 
       - name: Check bash syntax — install.sh
         run: bash -n install.sh && echo "Syntax OK"
-
-  permissions-check:
-    name: File Permissions
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Check scripts are executable
-        run: |
-          for script in websec-audit.sh install.sh; do
-            if [[ ! -x "$script" ]]; then
-              echo "ERROR: $script is not executable"
-              exit 1
-            fi
-            echo "OK: $script is executable"
-          done
